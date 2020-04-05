@@ -32,7 +32,7 @@ import alpaca_trade_api as tradeapi
 from alpaca_trade_api.entity import Entity
 import requests
 import pandas as pd
-
+from dateutil.parser import parse as date_parse
 import backtrader as bt
 from backtrader.metabase import MetaParams
 from backtrader.utils.py3 import queue, with_metaclass
@@ -315,6 +315,16 @@ class AlpacaStore(with_metaclass(MetaSingleton, object)):
 
         streamer.run()
 
+    @staticmethod
+    def iso_date(date_str):
+        """
+        this method will make sure that dates are formatted properly
+        as with isoformat
+        :param date_str:
+        :return: YYYY-MM-DD date formatted
+        """
+        return date_parse(date_str).date().isoformat()
+
     def candles(self, dataname, dtbegin, dtend, timeframe, compression,
                 candleFormat, includeFirst):
 
@@ -357,10 +367,15 @@ class AlpacaStore(with_metaclass(MetaSingleton, object)):
                 if dtkwargs['start']:
                     start_dt = dtkwargs['start'].isoformat()
 
-                response = self.oapi.polygon.historic_agg(granularity,
-                                                 dataname,
-                                                 _from=start_dt,
-                                                 to=end_dt)
+
+                response = \
+                    self.oapi.polygon.historic_agg_v2(
+                        dataname,
+                        compression,
+                        granularity,
+                        _from=self.iso_date(start_dt),
+                        to=self.iso_date(end_dt))
+
             except AlpacaError as e:
                 print(str(e))
                 q.put(e.error_response)
